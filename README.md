@@ -1,5 +1,6 @@
 Arduino sketch to measure a number of mains line power usage via split-core
-transformer circuit (based on SCT013-060 which has 1800 windings) and
+transformer circuit (based on SCT013-060 which has 1800 windings -
+http://www.yhdc.us/ENpdf/SCT013-060-0-60A-0-1V_en.pdf) and
 MySensors to integrate into Domoticz
 
 Use a circuit based on

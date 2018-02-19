@@ -24,6 +24,9 @@
 #define WAIT_PERIOD 30
 //#define WAIT_PERIOD 2   // for debugging
 
+// Spend 3 50hz cycles taking readings
+#define POLL_SIGNAL_TIME (3 * (1000 / 50 ))
+
 #ifdef USE_MY_SENSORS
 #include <MyConfig.h>
 
@@ -35,6 +38,8 @@
 #else
 #define wait delay
 #endif
+
+float total_usage[SENSOR_COUNT];
 
 #ifdef USE_MY_SENSORS
 void presentation()
@@ -51,14 +56,16 @@ void setup()
 #endif
 
   // Not strictly required
-  for ( uint8_t pin = 0; pin < SENSOR_COUNT; pin++ )
+  for ( uint8_t pin = 0; pin < SENSOR_COUNT; pin++ ) {
+    total_usage[pin] = 0;
     pinMode(A0 + pin, INPUT);
+  }
 }
 
 void loop()
 {
 #ifdef USE_MY_SENSORS
-  MyMessage msg(0, V_WATT);
+  MyMessage msg(0, V_KWH);
 #endif
 
   int reading_max[SENSOR_COUNT], reading_min[SENSOR_COUNT];
@@ -67,9 +74,8 @@ void loop()
     reading_min[pin] = 1024;
   }
 
-  // Spend 3 50hz cycles taking readings
   unsigned long start_time = millis();
-  while( millis() - start_time < 3* (1000/50) ) {
+  while( millis() - start_time < POLL_SIGNAL_TIME ) {
     for ( uint8_t pin = 0; pin < SENSOR_COUNT; pin++ ) {
         int cur = analogRead(A0 + pin);
         if( reading_max[pin] < cur )
@@ -107,9 +113,11 @@ void loop()
         // AC voltage
         * AC_VOLTAGE;
 
+    total_usage[pin] += ac_power * ( (float)WAIT_PERIOD + (float)POLL_SIGNAL_TIME / 1000.0 );
+
 #ifdef USE_MY_SENSORS
     msg.setSensor(pin);
-    send(msg.set((int)ac_power));
+    send(msg.set((int)( total_usage[pin] / 1000.0 / 3600.0 ) ));
 #else
       Serial.print(pin);
       Serial.print(" ");

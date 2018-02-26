@@ -13,7 +13,7 @@
  */
 #define USE_MY_SENSORS
 
-#define SENSOR_COUNT 3          // number of current sensors (A0-Ax)
+#define SENSOR_COUNT 6          // number of current sensors (A0-Ax)
 
 #define INPUT_VOLTAGE 5.0       // for most arduinos
 #define AC_VOLTAGE 240.0        // For calculating power
@@ -44,8 +44,20 @@ float total_usage[SENSOR_COUNT];
 #ifdef USE_MY_SENSORS
 void presentation()
 {
-  for ( uint8_t i = 0; i < SENSOR_COUNT; i++ )
+  for ( uint8_t i = 0; i < SENSOR_COUNT; i++ ) {
     present( i, S_POWER );
+    // try to get previous value from domoticz
+    request( i, V_KWH );
+  }
+}
+
+void receive(const MyMessage &message)
+{
+    if( message.sensor >= SENSOR_COUNT )
+        return;
+
+    if( message.type == V_KWH )
+        total_usage[message.sensor] = message.getFloat() * 1000.0 * 3600.0;
 }
 #endif
 
@@ -64,6 +76,8 @@ void setup()
 
 void loop()
 {
+  wait(WAIT_PERIOD * 1000);
+
 #ifdef USE_MY_SENSORS
   MyMessage msg(0, V_KWH);
 #endif
@@ -117,7 +131,10 @@ void loop()
 
 #ifdef USE_MY_SENSORS
     msg.setSensor(pin);
-    send(msg.set((int)( total_usage[pin] / 1000.0 / 3600.0 ) ));
+    msg.setType(V_KWH);
+    send(msg.set( total_usage[pin] / 1000.0 / 3600.0, 3 ));
+    msg.setType(V_WATT);
+    send(msg.set((uint32_t)ac_power));
 #else
       Serial.print(pin);
       Serial.print(" ");
@@ -130,5 +147,4 @@ void loop()
       Serial.println();
 #endif
   }
-  wait(WAIT_PERIOD * 1000);
 }

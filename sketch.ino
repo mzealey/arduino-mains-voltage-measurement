@@ -47,7 +47,7 @@ void presentation()
   for ( uint8_t i = 0; i < SENSOR_COUNT; i++ ) {
     present( i, S_POWER );
     // try to get previous value from domoticz
-    request( i, V_KWH );
+    request( i, V_VAR1 );
   }
 }
 
@@ -56,8 +56,8 @@ void receive(const MyMessage &message)
     if( message.sensor >= SENSOR_COUNT )
         return;
 
-    if( message.type == V_KWH )
-        total_usage[message.sensor] = message.getFloat() * 1000.0 * 3600.0;
+    if( message.type == V_VAR1 )
+        total_usage[message.sensor] = message.getFloat();
 }
 #endif
 
@@ -131,7 +131,7 @@ void loop()
     // analogRead of 8, plus some interference from cable or input voltage
     // fluctuations. Ignore this low-level chatter by setting a threshold
     // (sqrt( +-4 * 2 ) = 4 so say 3 as a reasonable cut-off)
-    if( rms < 3 )
+    if( rms < 4 )
         rms = 0;
 
     float ac_power =
@@ -154,6 +154,10 @@ void loop()
     send(msg.set( total_usage[pin] / 1000.0 / 3600.0, 3 ));
     msg.setType(V_WATT);
     send(msg.set((uint32_t)ac_power));
+
+    // For domoticz per https://github.com/domoticz/domoticz/issues/2650
+    msg.setType(V_VAR1);
+    send(msg.set(total_usage[pin], 6));
 #else
       Serial.print(pin);
       Serial.print(" ");
